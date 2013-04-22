@@ -6,14 +6,23 @@ module ActsAsOpengraphHelper
   # @raise [ArgumentError] When you pass an instance of an object that doesn't responds to opengraph_data (maybe you forgot to add acts_as_opengraph in your model)
   # @example
   #   opengraph_meta_tags_for(@movie)
-  def opengraph_meta_tags_for(obj)
+  def opengraph_meta_tags_for(obj, format=nil)
     raise(ArgumentError.new, "You need to call acts_as_opengraph on your #{obj.class} model") unless obj.respond_to?(:opengraph_data)
-    tags = obj.opengraph_data.map do |att|
-      att_name = att[:name] == "og:site_name" ? att[:name] : att[:name].dasherize
-      %(<meta property="#{att_name}" content="#{Rack::Utils.escape_html(att[:value])}"/>)
+    if format == 'json'
+      tags = Hash.new
+      obj.opengraph_data.each do |att|
+        att_name = att[:name] == "og:site_name" ? att[:name] : att[:name].dasherize
+        tags[att_name.to_s] = Rack::Utils.escape_html(att[:value]).to_s
+      end
+      tags.to_json
+    else
+      tags = obj.opengraph_data.map do |att|
+        att_name = att[:name] == "og:site_name" ? att[:name] : att[:name].dasherize
+        %(<meta property="#{att_name}" content="#{Rack::Utils.escape_html(att[:value])}"/>)
+      end
+      tags = tags.join("\n")
+      tags.respond_to?(:html_safe) ? tags.html_safe : tags
     end
-    tags = tags.join("\n")
-    tags.respond_to?(:html_safe) ? tags.html_safe : tags
   end
 
   # Displays the Facebook Like Button in your views.
